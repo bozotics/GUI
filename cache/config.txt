@@ -1,0 +1,42 @@
+width = 320
+height = 240
+fps = 90
+
+awb_r = 15
+awb_b = 16
+exposure = 2
+brightness = 62
+saturation = 70
+ss = 15000
+ISO = 500
+
+1-lo = 1
+2-lo = 184
+3-lo = 181
+1-hi = 8
+2-hi = 255
+3-hi = 255
+
+b1-lo = 164
+b2-lo = 95
+b3-lo = 220
+b1-hi = 180
+b2-hi = 134
+b3-hi = 255
+
+y1-lo = 26
+y2-lo = 233
+y3-lo = 177
+y1-hi = 34
+y2-hi = 255
+y3-hi = 243
+
+f1-lo = 65
+f2-lo = 186
+f3-lo = 186
+f1-hi = 73
+f2-hi = 255
+f3-hi = 255
+
+centre_x = 158
+centre_y = 114

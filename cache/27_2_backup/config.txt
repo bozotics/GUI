@@ -1,0 +1,14 @@
+width = 320
+height = 240
+fps = 60
+
+#exposure = 10000
+
+1-lo = 5
+2-lo = 84
+3-lo = 85
+1-hi = 20
+2-hi = 150
+3-hi = 170
+
+
