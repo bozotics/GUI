@@ -2,14 +2,135 @@
 
 void picam::run()
 {
+	char dest[] = "/dev/ttyAMA0";
+    if(gpioInitialise() < 0) cout << "GPIO Init failed\n";
+    serialTX = serOpen(dest, 1000000, 0);
+     
+    unsigned int localBallCnt = 0, localGoalCnt = 0, localFieldCnt = 0, bufferPointer;
+    unsigned int distance, angle;
+    int aveX, aveY;
+    int arrayPos=0;
+    char sendArray[255];
     debugCheck = false;
+    Point2f boundPoints[4];
+    thread threadFrame(&picam::getFrame, this);
     thread threadBall(&picam::processBall, this);
     thread threadGoal(&picam::processGoal, this);
-    thread treadField(&picam::processField, this);
-	while(!stopped.load(memory_order_relaxed))
+    thread threadField(&picam::processField, this);
+    
+    auto begin = chrono::steady_clock::now();
+	while(!stopped.load(memory_order_acq_rel))
 	{
-		
+        if(localBallCnt < ballCnt.load(memory_order_acq_rel))
+        {
+            localBallCnt = ballCnt.load(memory_order_acq_rel);
+            bufferPointer = localBallCnt%3;
+            if(rBall[bufferPointer].width != 0)
+            {
+                distance = (int)sqrt(pow(rBall[bufferPointer].x, 2) + pow(rBall[bufferPointer].y, 2));
+                angle = (int)(atan2(rBall[bufferPointer].x, rBall[bufferPointer].y)/PI*180+360);
+                if(angle >= 360) angle-=360;
+                *(sendArray + arrayPos) = 'B';
+                ++arrayPos;
+                inttochar(distance, sendArray, arrayPos);
+                inttochar(angle, sendArray, arrayPos);
+            }
+            if(pBall[bufferPointer].width != 0)
+            {
+                distance = (int)sqrt(pow(pBall[bufferPointer].x, 2) + pow(pBall[bufferPointer].y, 2));
+                angle = (int)(atan2(pBall[bufferPointer].x, pBall[bufferPointer].y)/PI*180+360);
+                if(angle >= 360) angle -= 360;
+                *(sendArray + arrayPos) = 'P';
+                ++arrayPos;
+                inttochar(distance, sendArray, arrayPos);
+                inttochar(angle, sendArray, arrayPos);
+            }
+        }
+        if(localGoalCnt < goalCnt.load(memory_order_acq_rel))
+        {
+            localGoalCnt = goalCnt.load(memory_order_acq_rel);
+            bufferPointer = localGoalCnt%3;
+            if(bGoal[bufferPointer].size.width != 1000)
+            {
+                bGoal[bufferPointer].points(boundPoints);
+                for(int i = 0 ; i < 4; ++i) 
+                {    
+                    aveX += boundPoints[i].x;
+                    aveY += boundPoints[i].y;
+                } 
+                aveX = (aveX/4)-prop.x;
+                aveY = (aveY/4)-prop.y;
+                distance = (int)distanceMapper(sqrt(pow(aveX, 2) + pow(aveY, 2)), zero);
+                angle = (int)(atan2(aveY, aveX)/PI*180+360);
+                if(angle >= 360) angle-=360;
+                *(sendArray + arrayPos) = 'b';
+                ++arrayPos;
+                inttochar(distance, sendArray, arrayPos);
+                inttochar(angle, sendArray, arrayPos);
+            }
+            if(yGoal[bufferPointer].size.width != 1000)
+            {
+                yGoal[bufferPointer].points(boundPoints);
+                for(int i = 0 ; i < 4; ++i) 
+                {    
+                    aveX += boundPoints[i].x;
+                    aveY += boundPoints[i].y;
+                } 
+                aveX = (aveX/4)-prop.x;
+                aveY = (aveY/4)-prop.y;
+                distance = (int)distanceMapper(sqrt(pow(aveX, 2) + pow(aveY, 2)), zero);
+                angle = (int)(atan2(aveY, aveX)/PI*180+360);
+                if(angle >= 360) angle-=360;
+                *(sendArray + arrayPos) = 'y';
+                ++arrayPos;
+                inttochar(distance, sendArray, arrayPos);
+                inttochar(angle, sendArray, arrayPos);
+            }
+        }   
+        if(localFieldCnt < fieldCnt.load(memory_order_acq_rel))
+        {
+            localFieldCnt = fieldCnt.load(memory_order_acq_rel);
+            bufferPointer = localFieldCnt%3;
+            if(field[bufferPointer].size.width != 1000)
+            {
+                field[bufferPointer].points(boundPoints);
+                for(int i = 0 ; i < 4; ++i) 
+                {    
+                    aveX += boundPoints[i].x;
+                    aveY += boundPoints[i].y;
+                } 
+                aveX = (aveX/4)-prop.x;
+                aveY = (aveY/4)-prop.y;
+                distance = (int)distanceMapper(sqrt(pow(aveX, 2) + pow(aveY, 2)), zero);
+                angle = (int)(atan2(aveY, aveX)/PI*180+360);
+                if(angle >= 360) angle-=360;
+                *(sendArray + arrayPos) = 'f';
+                ++arrayPos;
+                inttochar(distance, sendArray, arrayPos);
+                inttochar(angle, sendArray, arrayPos);
+            }
+        }
+        if(arrayPos > 0)
+        {
+            *(sendArray + arrayPos) = 'e';
+            ++arrayPos;
+            for(int i=0; i<arrayPos; ++i) cout << sendArray[i];
+            cout << endl;
+            //serWrite(serialTX, sendArray, arrayPos);
+            arrayPos = 0;
+        }
+        //else usleep(1000);
+        auto end = chrono::steady_clock::now();
+    	if((float)chrono::duration<double, milli>(end-begin).count() > 30000) stopped.store(true, memory_order_acq_rel);
 	}
+	cout << "run\n";
+	threadFrame.join();
+	threadBall.join();
+	threadGoal.join();
+	threadField.join();
+	Camera.release();
+	serClose(serialTX);
+	gpioTerminate();
 }
 
 void picam::processBall()
@@ -20,7 +141,7 @@ void picam::processBall()
     const int measSize = 4;
     const int contrSize = 0;
 
-	double ms = 0;
+	double ms = 14;
  
     unsigned int vtype = CV_32F;
 
@@ -63,207 +184,176 @@ void picam::processBall()
 	bool found = false;
   	int notFoundCount = 0;
 
-    Mat frameBall, maskBall, temp;
-    unsigned int frameNum = 0;
+    Mat frameBall, maskBall, tempMat;
+    unsigned int tempInt;
 
     Rect boundRect;
-    auto begin = chrono::high_resolution_clock::now();
-    auto end = chrono::high_resolution_clock::now();
 
     coordinates pixelCoor;
     ///////////////////////////
     ///////////LOOP////////////
     ///////////////////////////
-    while(!stopped.load(memory_order_relaxed))
+    auto begin = chrono::steady_clock::now();
+    while(!stopped.load(memory_order_acq_rel))
     {
-       begin = chrono::high_resolution_clock::now();
-        if(readFrame(frameNum, ref(frameBall))) 
-		{		
-            cvtColor(frameBall, frameBall, COLOR_BGR2HSV);
-            
-            //medianBlur(frameBall, frameBall, 3);
-            if(debugCheck) read.lock();
-		    inRangeHSV(0, frameBall, maskBall, temp);
-            if(debugCheck) read.unlock();
-            
-		    dilate(maskBall, maskBall, kernel, Point(-1, -1), 2);
-		    erode(maskBall, maskBall, kernel, Point(-1, -1), 2);
-            
-		    findContours(maskBall, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
-		    
-		    if(contours.size() > 0){
-		    
-			    sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
-    		    return contourArea(c1, false) < contourArea(c2, false);
-			    });
-			    boundRect = boundingRect(contours[contours.size()-1]);
-		    }
-            end = chrono::high_resolution_clock::now();
-            ms = ((float)chrono::duration_cast<std::chrono::milliseconds>(end-begin).count() + 14)/1000;
-			
-            if (found)
+        if(ballReq.load(memory_order_acq_rel) > 0) waitForBall();
+        ballReq.store(prop.PrioSkip[ballPriority.load(memory_order_acq_rel)-1], memory_order_acq_rel);
+        cvtColor(image[bufferPosition.load(memory_order_acq_rel)], frameBall, COLOR_BGR2HSV);
+        //medianBlur(frameBall, frameBall, 3);
+		inRangeHSV(0, frameBall, maskBall, tempMat);
+		dilate(maskBall, maskBall, kernel, Point(-1, -1), 2);
+		erode(maskBall, maskBall, kernel, Point(-1, -1), 2);
+		findContours(maskBall, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+		if(contours.size() > 0){
+		    sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
+    	    return contourArea(c1, false) < contourArea(c2, false);
+		    });
+		    boundRect = boundingRect(contours[contours.size()-1]);
+		}
+		
+        if (found)
+        {
+            kf.transitionMatrix.at<float>(2) = ms;
+            kf.transitionMatrix.at<float>(9) = ms;
+            //cout << "dT:" << endl << ms << endl;
+            state = kf.predict();
+            //cout << "State post:" << endl << state << endl;
+            predRect.width = state.at<float>(4);
+            predRect.height = state.at<float>(5);
+            predRect.x = state.at<float>(0);
+            predRect.y = state.at<float>(1);
+        }   
+		if(contours.size() == 0)
+        {   
+            notFoundCount++;
+            boundRect.width = 0;
+            //cout << "notFoundCount:" << notFoundCount << endl;
+            if( notFoundCount >= 100 )
             {
-                kf.transitionMatrix.at<float>(2) = ms;
-                kf.transitionMatrix.at<float>(9) = ms;
-                //cout << "dT:" << endl << ms << endl;
- 
-                state = kf.predict();
-                //cout << "State post:" << endl << state << endl;
+                found = false;
+                predRect.width = 0;
+            }
+            /*else
+            kf.statePost = state;*/
+        }
+        else
+        {
+            notFoundCount = 0;
+            pixelCoor.x = boundRect.x; // + boundRect.width / 2;
+            boundRect.x = distanceMapper(pixelCoor.x, prop.x); 
+            pixelCoor.y = boundRect.y; // + boundRect.height /2;
+            boundRect.y = distanceMapper(pixelCoor.y, prop.y); 
+            meas.at<float>(0) = boundRect.x;
+            meas.at<float>(1) = boundRect.y;
+            meas.at<float>(2) = (float)boundRect.width;
+            meas.at<float>(3) = (float)boundRect.height;
+            // cout << meas.at<float>(0) << " " << meas.at<float>(1) << " " << real.x << " " << pixelDistance << " " << ms << endl;
+            if (!found) // First detection!
+            {
+                // >>>> Initialization
+                kf.errorCovPre.at<float>(0) = 1; // px
+                kf.errorCovPre.at<float>(7) = 1; // px
+                kf.errorCovPre.at<float>(14) = 1;
+                kf.errorCovPre.at<float>(21) = 1;
+                kf.errorCovPre.at<float>(28) = 1; // px
+                kf.errorCovPre.at<float>(35) = 1; // px
 
-                predRect.width = state.at<float>(4);
-                predRect.height = state.at<float>(5);
-                predRect.x = state.at<float>(0);
-                predRect.y = state.at<float>(1);
-            }   
-            else predRect.width = 0;
-		    if(contours.size() == 0)
-            {   
-                notFoundCount++;
-                boundRect.width = 0;
-                //cout << "notFoundCount:" << notFoundCount << endl;
-                if( notFoundCount >= 100 )
-                {
-                    found = false;
-                }
-                /*else
-                kf.statePost = state;*/
+                state.at<float>(0) = boundRect.x;
+                state.at<float>(1) = boundRect.y;
+                state.at<float>(2) = 0;
+                state.at<float>(3) = 0;
+                state.at<float>(4) = meas.at<float>(2);
+                state.at<float>(5) = meas.at<float>(3);
+                // <<<< Initialization
+                kf.statePost = state;
+                found = true;
             }
             else
-            {
-                notFoundCount = 0;
-
-                pixelCoor.x = boundRect.x; // + boundRect.width / 2;
-                boundRect.x = distanceMapper(pixelCoor.x, prop.x); 
-                pixelCoor.y = boundRect.y; // + boundRect.height /2;
-                boundRect.y = distanceMapper(pixelCoor.y, prop.y); 
-                meas.at<float>(0) = boundRect.x;
-                meas.at<float>(1) = boundRect.y;
-                meas.at<float>(2) = (float)boundRect.width;
-                meas.at<float>(3) = (float)boundRect.height;
-
-                // cout << meas.at<float>(0) << " " << meas.at<float>(1) << " " << real.x << " " << pixelDistance << " " << ms << endl;
-
-                if (!found) // First detection!
-                {
-                    // >>>> Initialization
-                    kf.errorCovPre.at<float>(0) = 1; // px
-                    kf.errorCovPre.at<float>(7) = 1; // px
-                    kf.errorCovPre.at<float>(14) = 1;
-                    kf.errorCovPre.at<float>(21) = 1;
-                    kf.errorCovPre.at<float>(28) = 1; // px
-                    kf.errorCovPre.at<float>(35) = 1; // px
-    
-                    state.at<float>(0) = boundRect.x;
-                    state.at<float>(1) = boundRect.y;
-                    state.at<float>(2) = 0;
-                    state.at<float>(3) = 0;
-                    state.at<float>(4) = meas.at<float>(2);
-                    state.at<float>(5) = meas.at<float>(3);
-                    // <<<< Initialization
-                    kf.statePost = state;
-                    found = true;
-                }
-                else
-                    kf.correct(meas); // Kalman Correction
-    
-                //cout << "Measure matrix:" << endl << meas << endl;
-            }
-            if(found) writeBall(boundRect, predRect);
-            end = chrono::high_resolution_clock::now();
-			//cout << "ballTime: " << ((float)chrono::duration_cast<std::chrono::microseconds>(end-begin).count()) << "\n";
+                kf.correct(meas); // Kalman Correction
+            //cout << "Measure matrix:" << endl << meas << endl;
         }
-		else usleep(500);
+        tempInt = (ballCnt.load(memory_order_acq_rel)+1)%3;
+        rBall[tempInt] = boundRect;
+        pBall[tempInt] = predRect;
+        ballCnt.fetch_add(1, memory_order_acq_rel);
     }
-	cout << "ball\n";
+    auto end = chrono::steady_clock::now();
+    cout << "ball FPS: " << (1000*(float)ballCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
 void picam::processGoal()
 {
-    Mat frameGoal, maskGoalY, maskGoalB, temp;
-    unsigned int frameNum = 0;
+    Mat frameGoal, maskGoalY, maskGoalB, tempMat;
+    unsigned int tempInt;
     vector<vector<Point> > bContours;
     vector<vector<Point> > yContours;
-	RotatedRect yRect, bRect;
     RotatedRect empty(Point2f(500, 500), Size2f(1000, 1000), 0);
-    while(!stopped.load(memory_order_relaxed)){
-        auto begin = chrono::high_resolution_clock::now();
-        if(readFrame(frameNum, ref(frameGoal)))
-        {
-        	cvtColor(frameGoal, frameGoal, COLOR_BGR2HSV);
-	    	medianBlur(frameGoal, frameGoal, 3);
-        	if(debugCheck) read.lock();
-            inRangeHSV(1, frameGoal, maskGoalB, temp);
-            inRangeHSV(2, frameGoal, maskGoalY, temp);
-	    	//inRange(frameGoal, Scalar(thres[9], thres[10], thres[11]), Scalar(thres[6], thres[7], thres[8]), maskGoalB);
-        	//inRange(frameGoal, Scalar(thres[15], thres[16], thres[17]), Scalar(thres[12], thres[13], thres[14]), maskGoalY);
-	    	if(debugCheck) read.unlock();
-        	dilate(maskGoalB, maskGoalB, kernel, Point(-1, -1), 3);
-	    	erode(maskGoalB, maskGoalB, kernel, Point(-1, -1), 3);
-        	dilate(maskGoalY, maskGoalY, kernel, Point(-1, -1), 3);
-	    	erode(maskGoalY, maskGoalY, kernel, Point(-1, -1), 3);
-	    	findContours(maskGoalB, bContours, RETR_TREE, CHAIN_APPROX_SIMPLE);
-	    	if(bContours.size() > 0)
-	    	{
-	    		sort(bContours.begin(), bContours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
-        			return contourArea(c1, false) < contourArea(c2, false);
-	    				});
-	    		bRect = minAreaRect(bContours[bContours.size()-1]);
-	    	}
-        	else bRect = empty;
-        	findContours(maskGoalY, yContours, RETR_TREE, CHAIN_APPROX_SIMPLE);
-	    	if(yContours.size() > 0)
-	    	{
-	    		sort(yContours.begin(), yContours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
-        			return contourArea(c1, false) < contourArea(c2, false);
-	    				});
-	    		yRect = minAreaRect(yContours[yContours.size()-1]);
-	    	}
-        	else yRect = empty;
-        	if(yContours.size() > 0 || bContours.size() > 0) writeGoal(bRect, yRect);
-
-            auto end = chrono::high_resolution_clock::now();
-            //cout << "goalTime: " << ((float)chrono::duration_cast<std::chrono::microseconds>(end-begin).count()) << "\n";
-		}
-		else usleep(1000);
+    auto begin = chrono::steady_clock::now();
+    while(!stopped.load(memory_order_acq_rel)){
+        if(goalReq.load(memory_order_acq_rel) > 0) waitForGoal();
+        goalReq.store(prop.PrioSkip[goalPriority.load(memory_order_acq_rel)-1], memory_order_acq_rel);
+        cvtColor(image[bufferPosition.load(memory_order_acq_rel)], frameGoal, COLOR_BGR2HSV);
+	    //medianBlur(frameGoal, frameGoal, 3);
+        inRangeHSV(1, frameGoal, maskGoalB, tempMat);
+        inRangeHSV(2, frameGoal, maskGoalY, tempMat);
+        dilate(maskGoalB, maskGoalB, kernel, Point(-1, -1), 3);
+	    erode(maskGoalB, maskGoalB, kernel, Point(-1, -1), 3);
+        dilate(maskGoalY, maskGoalY, kernel, Point(-1, -1), 3);
+	    erode(maskGoalY, maskGoalY, kernel, Point(-1, -1), 3);
+	    findContours(maskGoalB, bContours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+        tempInt = (goalCnt.load(memory_order_acq_rel) + 1)%3;
+	    if(bContours.size() > 0)
+	    {
+	    	sort(bContours.begin(), bContours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
+        		return contourArea(c1, false) < contourArea(c2, false);
+	    			});
+	    	bGoal[tempInt] = minAreaRect(bContours[bContours.size()-1]);
+	    }
+        else bGoal[tempInt] = empty;
+        findContours(maskGoalY, yContours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+	    if(yContours.size() > 0)
+	    {
+	    	sort(yContours.begin(), yContours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
+        		return contourArea(c1, false) < contourArea(c2, false);
+	    			});
+	    	yGoal[tempInt] = minAreaRect(yContours[yContours.size()-1]);
+	    }
+        else yGoal[tempInt] = empty;
+        goalCnt.fetch_add(1, memory_order_acq_rel);
     }
-    cout << "goal\n";
+    auto end = chrono::steady_clock::now();
+    cout << "goal FPS: " << (1000*(float)goalCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
 void picam::processField()
 {
-    Mat frameField, maskField, temp;
-    unsigned int frameNum = 0;
+    Mat frameField, maskField, tempMat;
+    unsigned int tempInt;
     vector<vector<Point> > contours;
-	RotatedRect fRect;
     Mat bigKernel = Mat::ones(5, 5, CV_8UC1);
     RotatedRect empty(Point2f(500, 500), Size2f(1000, 1000), 0);
-    while(!stopped.load(memory_order_relaxed)){
-        auto begin = chrono::high_resolution_clock::now();
-        if(readFrame(frameNum, ref(frameField)))
-        {
-            cvtColor(frameField, frameField, COLOR_BGR2HSV);
-	        medianBlur(frameField, frameField, 3);
-            if(debugCheck) read.lock();
-            inRangeHSV(3, frameField, maskField, temp);
-            //inRange(frameField, Scalar(thres[21], thres[22], thres[23]), Scalar(thres[18], thres[19], thres[20]), maskField);
-	        if(debugCheck) read.unlock();
-            dilate(maskField, maskField, kernel, Point(-1, -1), 3);
-	        erode(maskField, maskField, kernel, Point(-1, -1), 3);
-	        findContours(maskField, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
-	        if(contours.size() > 0){
-	        	sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
-            	return contourArea(c1, false) < contourArea(c2, false);
-	        	});
-	        	fRect = minAreaRect(contours[contours.size()-1]);
-	        }
-            else fRect = empty;
-            if(contours.size() > 0) writeField(fRect);
-            auto end = chrono::high_resolution_clock::now();
-            //cout << "fieldTime: " << ((float)chrono::duration_cast<std::chrono::microseconds>(end-begin).count()) << "\n";
-        }
-        else usleep(1000);
+    auto begin = chrono::steady_clock::now();
+    while(!stopped.load(memory_order_acq_rel)){
+        if(fieldReq.load(memory_order_acq_rel) > 0) waitForField();
+        fieldReq.store(prop.PrioSkip[fieldPriority.load(memory_order_acq_rel)-1], memory_order_acq_rel);
+        cvtColor(image[bufferPosition.load(memory_order_acq_rel)], frameField, COLOR_BGR2HSV);
+	    //medianBlur(frameField, frameField, 3);
+        inRangeHSV(3, frameField, maskField, tempMat);
+        dilate(maskField, maskField, kernel, Point(-1, -1), 3);
+	    erode(maskField, maskField, kernel, Point(-1, -1), 3);
+	    findContours(maskField, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+        tempInt = (fieldCnt.load(memory_order_acq_rel) + 1)%3;
+	    if(contours.size() > 0){
+	    	sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
+        	return contourArea(c1, false) < contourArea(c2, false);
+	    	});
+	    	field[tempInt] = minAreaRect(contours[contours.size()-1]);
+	    }
+        else field[tempInt] = empty;
+        fieldCnt.fetch_add(1, memory_order_acq_rel);
     }
-    cout << "field\n";
+    auto end = chrono::steady_clock::now();
+    cout << "field FPS: " << (1000*(float)fieldCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
 double picam::distanceMapper(double pixel, int &centre)
@@ -281,118 +371,47 @@ double picam::distanceUnmapper(double const &dist, int &centre)
 
 void picam::getFrame()
 {
-float cnt = 0;
-    if(debugCheck){
-    
-        while(!stopped.load(memory_order_relaxed))
-        {
-        auto begin = chrono::high_resolution_clock::now();
-        cnt+=1;
-            
-            
-	    	Camera.grab();
-	    	
-            
-	    	writeFrame();
-            auto end = chrono::high_resolution_clock::now();
-            cout << "readTime: " << ((float)chrono::duration_cast<std::chrono::microseconds>(end-begin).count()) << "\n";
-        }
-       
-	cout << "getFrame\n";
-    }
-    else{
-        while(!stopped.load(memory_order_relaxed))
-        {
-	    	Camera.grab();
-	    	writeFrame();
-        }
-    }
-    
-}
-
-unsigned int picam::readFrame(unsigned int &frameNum, Mat &frame)
-{
-    shared_lock<shared_mutex> lock(imgMtx);
-    if(imgCnt!=frameNum)
+    auto begin = chrono::steady_clock::now();
+    while(!stopped.load(memory_order_acq_rel))
     {
-    resize(image[bufferPosition], image2, Size(320, 240), 0, 0, INTER_NEAREST);
-        frame = image2.clone();
-        frameNum = imgCnt;
-        return 1;
+        imgCnt++;
+		Camera.grab();
+		bufferPosition.store(Camera.retrieve(), memory_order_acq_rel);
+        ballReq.fetch_sub(1, memory_order_seq_cst);
+        goalReq.fetch_sub(1, memory_order_seq_cst);
+        fieldReq.fetch_sub(1, memory_order_seq_cst);
+        if(ballReq.load(memory_order_acq_rel) <= 0) ballCond.notify_all();
+        if(goalReq.load(memory_order_acq_rel) <= 0) goalCond.notify_all();
+        if(fieldReq.load(memory_order_acq_rel) <= 0) fieldCond.notify_all();
     }
-    else return 0;
+    auto end = chrono::steady_clock::now();
+    cout << "Frame FPS: " << (1000*(float)imgCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
+    ballCond.notify_all();
+    goalCond.notify_all();
+    fieldCond.notify_all();
 }
 
-void picam::writeFrame()
+void picam::waitForBall()
 {
-	bufferPosition = Camera.retrieve();
-	
-    imgCnt++;
+    unique_lock<mutex> lock(ballMtx);
+    ballCond.wait(lock);
 }
 
-void picam::writeBall(Rect real, Rect pred)
+void picam::waitForGoal()
 {
-    unique_lock<shared_mutex> lock(ballMtx);
-    ++ballCnt;
-    rBall = real;
-    pBall = pred;
+    unique_lock<mutex> lock(goalMtx);
+    goalCond.wait(lock);
 }
 
-unsigned int picam::readBall(unsigned int &frameNum, Rect &realClone, Rect &predClone)
+void picam::waitForField()
 {
-    shared_lock<shared_mutex> lock(ballMtx);
-    if(ballCnt!=frameNum)
-    {
-        realClone = rBall;
-        predClone = pBall;
-		frameNum = ballCnt;
-        return 1;
-    }
-    else return 0;
-}
-
-void picam::writeGoal(RotatedRect bRect, RotatedRect yRect)
-{
-    unique_lock<shared_mutex> lock(goalMtx);
-    ++goalCnt;
-    bGoal = bRect;
-    yGoal = yRect;
-}
-
-unsigned int picam::readGoal(unsigned int &frameNum, RotatedRect &bGoalClone, RotatedRect &yGoalClone)
-{
-    shared_lock<shared_mutex> lock(goalMtx);
-    if(goalCnt!=frameNum)
-    {
-        bGoalClone = bGoal;
-        yGoalClone = yGoal;
-		frameNum = goalCnt;
-        return 1;
-    }
-    else return 0;
-}
-
-void picam::writeField(RotatedRect fRect)
-{
-    unique_lock<shared_mutex> lock(fieldMtx);
-    ++fieldCnt;
-    field = fRect;
-}
-
-unsigned int picam::readField(unsigned int &frameNum, RotatedRect &fieldClone)
-{
-    shared_lock<shared_mutex> lock(fieldMtx);
-    if(fieldCnt!=frameNum)
-    {
-        fieldClone = field;
-		frameNum = fieldCnt;
-        return 1;
-    }
-    else return 0;
+    unique_lock<mutex> lock(fieldMtx);
+    fieldCond.wait(lock);
 }
 
 void picam::inRangeHSV(int type, Mat &input, Mat &output, Mat &temp)
 {
+    if(debugCheck) read.lock();
     if(thres[type*6] <= 180)
         inRange(input, Scalar(thres[type*6+3], thres[type*6+4], thres[type*6+5]), Scalar(thres[type*6], thres[type*6+1], thres[type*6+2]), output);
     else
@@ -401,11 +420,24 @@ void picam::inRangeHSV(int type, Mat &input, Mat &output, Mat &temp)
         inRange(input, Scalar(0, thres[type*6+4], thres[type*6+5]), Scalar(thres[type*6] - 180, thres[type*6+1], thres[type*6+2]), output);
         bitwise_or(temp, output, output);
     }
+    if(debugCheck) read.unlock();
+}
+
+void picam::inttochar(int integer, char *character, int &arrayPos)
+{
+    static int temp;
+    (integer==0) ? temp = 0 : temp = (int)log10(integer);
+    for(int i = 0; i <= temp; ++i){
+        *(character+arrayPos) = (integer/(int)pow(10, temp-i)%10 + 48);
+        ++arrayPos;
+    }
+    *(character + arrayPos) = 32;
+    ++arrayPos;
 }
 
 void picam::readConfig()
 {
-    ifstream cFile ("/home/alarm/project/cpp/camera2/config.txt");
+    ifstream cFile ("/home/alarm/project/cpp/camera4/config.txt");
     if (cFile.is_open())
     {
         string line;
@@ -454,6 +486,9 @@ void picam::readConfig()
 			else if(name == "ISO") prop.configVal[6] = stoi(value);
             else if(name == "centre_x") prop.x = stoi(value);
             else if(name == "centre_y") prop.y = stoi(value);
+            else if(name == "P1Skip") prop.PrioSkip[0] = stoi(value);
+            else if(name == "P2Skip") prop.PrioSkip[1] = stoi(value);
+            else if(name == "P3Skip") prop.PrioSkip[2] = stoi(value);
 			for(int i=0; i<24; i++) tempThres[i] = thres[i];
         }
     }

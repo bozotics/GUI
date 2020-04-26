@@ -4,6 +4,8 @@
         "chrono": "cpp",
         "shared_mutex": "cpp",
         "condition_variable": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "ostream": "cpp",
+        "cmath": "cpp"
     }
 }

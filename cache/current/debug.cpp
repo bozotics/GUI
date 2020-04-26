@@ -4,8 +4,8 @@ void picam::debug()
 {
     debugCheck = true;
     debugImages[0] = Mat::zeros(prop.height, prop.width, CV_8UC3);
-    Mat imageToSend, temp;
-    int imageSize, dualMode = 0;
+    Mat imageToSend, tempMat;
+    int imageSize, dualMode = 0, angle, distance;
     unsigned int frameNum = 0, localBallCnt = 0, localGoalCnt = 0, localFieldCnt = 0;
     int16_t conv;
     vector<vector<Point> > contours;
@@ -16,25 +16,24 @@ void picam::debug()
 	sendImageDims();
 	thread threadCommands(&picam::receiveCommands, this);
 	thread threadFrame(&picam::getFrame, this);
-	//thread threadBall(&picam::processBall, this);
-    //thread threadGoal(&picam::processGoal, this);
-    //thread threadField(&picam::processField, this);
-    while(!stopped.load(memory_order_relaxed))
+	thread threadBall(&picam::processBall, this);
+    thread threadGoal(&picam::processGoal, this);
+    thread threadField(&picam::processField, this);
+    while(!stopped.load(memory_order_acq_rel))
     {
-        if(readFrame(ref(frameNum), ref(debugImages[0])) != 0)
+        if(frameNum != bufferPosition.load(memory_order_acq_rel))
         {
+            frameNum = bufferPosition.load(memory_order_acq_rel);
+            debugImages[0] = image[frameNum].clone();
             cvtColor(debugImages[0], debugImages[1], COLOR_BGR2HSV);
             debugImages[5] = debugImages[0].clone();
 		    debugImages[6] = debugImages[0].clone();
 		    debugImages[7] = debugImages[0].clone();
 	        medianBlur(debugImages[1], debugImages[2], 3);
-	        //read.lock();
 	        if(trackType < 4)
-			    //inRange(debugImages[2], Scalar(thres[trackType*6+3], thres[trackType*6+4], thres[trackType*6+5]), 	Scalar(thres[trackType*6+0], thres[trackType*6+1], thres[trackType*6+2]), debugImages[8]);
-                inRangeHSV(trackType, debugImages[2], debugImages[8], temp);
-			else //inRange(debugImages[2], Scalar(thres[3], thres[4], thres[5]), 	Scalar(thres[0], thres[1], thres[2]), debugImages[8]);
-                inRangeHSV(0, debugImages[2], debugImages[8], temp);
-	        //read.unlock();
+                inRangeHSV(trackType, debugImages[2], debugImages[8], tempMat);
+			else
+                inRangeHSV(0, debugImages[2], debugImages[8], tempMat);
 			cvtColor(debugImages[8], debugImages[3], COLOR_GRAY2BGR);
 			dilate(debugImages[8], debugImages[8], kernel, Point(-1, -1), 3);
 			erode(debugImages[8], debugImages[8], kernel, Point(-1, -1), 3);
@@ -50,12 +49,21 @@ void picam::debug()
     	    		return contourArea(c1, false) < contourArea(c2, false);
 		    			});
 		    }
-            //read.lock();
+            read.lock();
             if(trackType == 0 || trackType == 4){
-                if(readBall(localBallCnt, rBound, pBound) != 0)
+                if(localBallCnt < ballCnt.load(memory_order_acq_rel))
                 {
+                    localBallCnt = ballCnt.load(memory_order_acq_rel);
+                    rBound = rBall[localBallCnt%3];
+                    pBound = pBall[localBallCnt%3];
                     if(rBound.width != 0)
                     {
+                        distance = (int)sqrt(pow(rBound.x, 2) + pow(rBound.y, 2));
+                        angle = (int)(atan2(rBound.y, rBound.x)/PI*180+360);
+                        if(angle >= 360) angle-=360;
+                        cout << rBound.x << ", " << rBound.y << ": " << distance << " " << angle << endl;
+                        //inttochar(distance, sendArray, arrayPos);
+                        //inttochar(angle, sendArray, arrayPos);
                         rBound.x = distanceUnmapper((double)rBound.x, prop.x);
                         rBound.y = distanceUnmapper((double)rBound.y, prop.y);
                         if((dualMode==0 && showFrame==6) || (dualMode==1 && showFrame2==6) || trackType == 4) 
@@ -71,14 +79,32 @@ void picam::debug()
                 }
             }
             if(trackType == 1 || trackType == 2 || trackType == 4){
-                if(readGoal(localGoalCnt, bBound, yBound))
+                if(localGoalCnt < goalCnt.load(memory_order_acq_rel))
                 {
+                    localGoalCnt = goalCnt.load(memory_order_acq_rel);
+                    bBound = bGoal[localGoalCnt%3];
+                    yBound = yGoal[localGoalCnt%3];
                     if(bBound.size.width != 1000)
                     {
+                        int aveX = 0, aveY = 0;
                         bBound.points(bBoundPoints);
+                        for(int i = 0 ; i < 4; ++i)
+                        {
+                            aveX += bBoundPoints[i].x;
+                            aveY += bBoundPoints[i].y;
+                        }
                         if((dualMode==0 && showFrame==6) || (dualMode==1 && showFrame2==6) || trackType == 4)
-                            for (int i = 0; i < 4; i++) 
+                        {
+                            for (int i = 0; i < 4; i++)
                                 line(debugImages[(!dualMode) ? showFrame : showFrame2], bBoundPoints[i], bBoundPoints[(i+1)%4], CV_RGB(0, 0, 255), 2);
+                            circle(debugImages[(!dualMode) ? showFrame : showFrame2], Point((int)aveX/4, (int)aveY/4), 1, Scalar(0, 255, 0), 1);
+                        }
+                        aveX = (aveX/4)-prop.x;
+                        aveY = (aveY/4)-prop.y;
+                        distance = (int)distanceMapper(sqrt(pow(aveX, 2) + pow(aveY, 2)), zero);
+                        angle = (int)(atan2(aveY, aveX)/PI*180+360);
+                        if(angle >= 360) angle-=360;
+                        cout << "goal: " << distance << " " << angle << endl;
                     }
                     if(yBound.size.width != 1000)
                     {
@@ -90,8 +116,10 @@ void picam::debug()
                 }   
             }
             if(trackType == 3 || trackType == 4){
-                if(readField(localFieldCnt ,fBound))
+                if(localFieldCnt < fieldCnt.load(memory_order_acq_rel))
                 {
+                    localFieldCnt = fieldCnt.load(memory_order_acq_rel);
+                    fBound = field[localFieldCnt%3];
                     if(fBound.size.width != 1000)
                     {
                         fBound.points(fBoundPoints);
@@ -103,7 +131,7 @@ void picam::debug()
                 
             }
             imageToSend = debugImages[(!dualMode) ? showFrame : showFrame2].reshape(0,1);
-            //read.unlock();
+            read.unlock();
 	        imageSize = imageToSend.total() * imageToSend.elemSize();
 	        conv = htons(dualMode);
 	        send(socketIdentity, (char*)&conv, sizeof(uint16_t), 0);
@@ -111,16 +139,14 @@ void picam::debug()
             dualMode = (dualMode+1)%2;
         }
 		else
-		{
-			usleep(1000);
-		}
+			usleep(2000);
     }
 	cout << "debug\n";
 	threadCommands.join();
 	threadFrame.join();
-	//threadBall.join();
-	//threadGoal.join();
-	//threadField.join();
+	threadBall.join();
+	threadGoal.join();
+	threadField.join();
 	close(socketIdentity);
 	Camera.release();
 }
@@ -128,7 +154,7 @@ void picam::debug()
 void picam::receiveCommands()
 {
     int type, val, prevType = 0, prevVal = 1;
-	while(!stopped.load(memory_order_relaxed)){	
+	while(!stopped.load(memory_order_acq_rel)){	
 		recv(socketIdentity, (char*)&type, sizeof(uint16_t), 0);
 		recv(socketIdentity, (char*)&val, sizeof(uint16_t), 0);
 		type = ntohs(type);
@@ -138,7 +164,7 @@ void picam::receiveCommands()
             read.lock();
 			prevType = type;
 			prevVal = val;
-			if(type == 0) stopped.store(true, memory_order_relaxed);
+			if(type == 0) stopped.store(true, memory_order_acq_rel);
             else if(type <= 24)
             {
                 tempThres[type-1] = val;

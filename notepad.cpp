@@ -229,29 +229,29 @@ void notePad::main_c()
     QString text = editor->toPlainText();
     out << text;
     file.close();*/
-    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/main.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera3/'");
+    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/main.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
 }
 
 void notePad::camera_c()
 {
     int input;
-    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/camera.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera3/'");
+    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/camera.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
 }
 
 void notePad::camera_h()
 {
     int input;
-    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/camera.h alarm@192.168.7.18:/home/alarm/project/cpp/camera3/'");
+    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/camera.h alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
 }
 
 void notePad::config()
 {
     int input;
-    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/config.txt alarm@192.168.7.18:/home/alarm/project/cpp/camera3/'");
+    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/config.txt alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
 }
 
 void notePad::debug_c()
 {
     int input;
-    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/debug.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera3/'");
+    input = system("gnome-terminal -e 'scp /home/justin/programs/cpp/GUI/cache/current/debug.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
 }

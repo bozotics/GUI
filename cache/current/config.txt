@@ -17,26 +17,30 @@ ISO = 500
 2-hi = 255
 3-hi = 255
 
-b1-lo = 164
-b2-lo = 95
-b3-lo = 220
-b1-hi = 180
-b2-hi = 134
-b3-hi = 255
+b1-lo = 99
+b2-lo = 115
+b3-lo = 89
+b1-hi = 106
+b2-hi = 147
+b3-hi = 105
 
-y1-lo = 26
-y2-lo = 233
-y3-lo = 177
-y1-hi = 34
+y1-lo = 18
+y2-lo = 251
+y3-lo = 170
+y1-hi = 21
 y2-hi = 255
-y3-hi = 243
+y3-hi = 201
 
-f1-lo = 65
-f2-lo = 186
-f3-lo = 186
-f1-hi = 73
-f2-hi = 255
-f3-hi = 255
+f1-lo = 55
+f2-lo = 163
+f3-lo = 141
+f1-hi = 61
+f2-hi = 180
+f3-hi = 149
 
 centre_x = 158
 centre_y = 114
+
+P1Skip = 1
+P2Skip = 5
+P3Skip = 9

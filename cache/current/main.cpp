@@ -1,7 +1,9 @@
 #include "camera.h"
 
 int main(int argc, char **argv){
-if (gpioInitialise() < 0) printf("GPIO pins failed\n");
+	//pi = pigpio_start(0, 0);
+	//if(pi < 0) printf("Can't connect to the pigpio daemon\n");
+	
 	picam* camera = new picam();
 	printf("Initiate stream\n");
     if (!(camera -> Camera.open(camera -> image))){

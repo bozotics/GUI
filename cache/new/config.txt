@@ -40,3 +40,7 @@ f3-hi = 255
 
 centre_x = 158
 centre_y = 114
+
+P1Skip = 0
+P2Skip = 4
+P3Skip = 8
