@@ -215,7 +215,7 @@ void socketServer::connectToNetwork(){
   	server_addr.sin_addr.s_addr = INADDR_ANY;
   	server_addr.sin_port = htons(port);
 	
-	if (bind(sock_init, (struct sockaddr*) &server_addr, server_addr_size) == -1) {
+	if (::bind(sock_init, (struct sockaddr*) &server_addr, server_addr_size) == -1) {
     	perror("Couldn't bind initial socket file descriptor!");
       	close(sock_init);
       	exit(1);

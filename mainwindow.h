@@ -23,12 +23,11 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QProcess>
-#include <libssh/libssh.h>
+#include <libssh/libsshpp.hpp>
 #include <stdlib.h>
 #include <stdio.h>
 #include <chrono>
 #include <QComboBox>
-#include "../matplotlibcpp.h"
 #include <notepad.h>
 #include <QTextStream>
 #include <fstream>
