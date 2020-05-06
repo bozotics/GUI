@@ -34,28 +34,28 @@ void sshComm::startCamera()
     	if (nbytes > 0) written = write(1, bufferRead, nbytes);
 		else if (nbytes == 0){
 			if(cnt == 0){
-				char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/config.txt justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/\n";
-				nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
+				//char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/config.txt justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/\n";
+				//nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
 				++cnt;
 			}
 			else if(cnt == 1){
-				char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/main.cpp justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
-				nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
+				//char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/main.cpp justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
+				//nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
 				++cnt;
 			}
 			else if(cnt == 2){
-				char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/camera.h justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
-				nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
+				//char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/camera.h justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
+				//nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
 				++cnt;
 			}
 			else if(cnt == 3){
-				char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/camera.cpp justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
-				nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
+				//char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/camera.cpp justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
+				//nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
 				++cnt;
 			}
 			else if(cnt == 4){
-				char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/debug.cpp justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
-				nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
+				//char bufferWrite[] = "scp /home/alarm/project/cpp/camera4/debug.cpp justin@192.168.7.17:/home/justin/programs/cpp/GUI/cache/current\n";
+				//nbytes = ssh_channel_write(channel, bufferWrite, sizeof(bufferWrite));
 				++cnt;
 			}
 			else if(cnt == 5){
@@ -77,7 +77,7 @@ void sshComm::startCamera()
 					if(j == 11){
 						make = false;
 						int input;
-    					input = system("gnome-terminal -e '/home/justin/programs/cpp/relaunch'");
+    					//input = system("gnome-terminal -e '/home/justin/programs/cpp/relaunch'");
 						emit afterMake();
 					}
 				}

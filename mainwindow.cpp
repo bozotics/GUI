@@ -441,7 +441,7 @@ void MainWindow::updateRoi(QString roi)
 
 void MainWindow::readConfig()
 {
-	ifstream cFile ("/home/justin/programs/cpp/GUI/cache/current/config.txt");
+	ifstream cFile (config_file);
     if (cFile.is_open())
     {
         string line;
@@ -495,8 +495,8 @@ void MainWindow::readConfig()
 
 void MainWindow::saveConfig()
 {
-	ifstream cFile ("/home/justin/programs/cpp/GUI/cache/current/config.txt");
-	ofstream outFile("/home/justin/programs/cpp/GUI/cache/current/config_temp.txt");
+	ifstream cFile (config_file);
+	ofstream outFile(config_temp);
     if (cFile.is_open())
     {
         string line;
@@ -548,8 +548,8 @@ void MainWindow::saveConfig()
 			else if(line.length() != 0) outFile << name << " = " << value << "\n";
         }
 		outFile.close();
-		rename("/home/justin/programs/cpp/GUI/cache/current/config_temp.txt", "/home/justin/programs/cpp/GUI/cache/current/config.txt");
-		remove("/home/justin/programs/cpp/GUI/cache/current/config_temp.txt");
+		rename(config_temp, config_file);
+		remove(config_temp);
 	}
 }
 
