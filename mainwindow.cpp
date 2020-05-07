@@ -441,10 +441,10 @@ void MainWindow::updateRoi(QString roi)
 
 void MainWindow::readConfig()
 {
-    char *tempFilePath;
-    strcpy(tempFilePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
-    strcat(tempFilePath, config_txt.c_str());
-	ifstream cFile (tempFilePath);
+    char *filePath = static_cast<char*>(malloc(strlen(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData()) + strlen(config_txt.c_str()) + 1));
+    strcpy(filePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    strcat(filePath, config_txt.c_str());
+	ifstream cFile (filePath);
     if (cFile.is_open())
     {
         string line;
@@ -498,7 +498,8 @@ void MainWindow::readConfig()
 
 void MainWindow::saveConfig()
 {
-    char *tempFilePath, *filePath;
+    char *filePath = static_cast<char*>(malloc(strlen(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData()) + strlen(config_txt.c_str()) + 1));
+    char *tempFilePath = static_cast<char*>(malloc(strlen(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData()) + strlen(config_temp_txt.c_str()) + 1));
     strcpy(filePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
     strcat(filePath, config_txt.c_str());
 	ifstream cFile (filePath);
