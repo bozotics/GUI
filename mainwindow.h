@@ -34,6 +34,7 @@
 #include <QMenu>
 #include <QAction>
 #include <QMenuBar>
+#include <QStandardPaths>
 
 
 /*QT_BEGIN_NAMESPACE
@@ -220,10 +221,7 @@ class MainWindow : public QMainWindow{
 		int allThres[24];
 };
 
-char *config_txt = "/GUI/cache/current/config.txt";
-char *config_temp_txt = "/GUI/cache/current/config_temp.txt";
-char *config_file = static_cast<char*>(malloc(strlen(getenv("HOME")) + strlen(config_txt) + 1)); // to account for NULL terminator
-char *config_temp = static_cast<char*>(malloc(strlen(getenv("HOME")) + strlen(config_temp_txt) + 1)); // to account for NULL terminator
+const string config_txt = "/cache/current/config.txt", config_temp_txt = "/cache/current/config_temp.txt";
 
 #endif
 

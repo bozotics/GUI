@@ -229,32 +229,34 @@ void notePad::main_c()
     QString text = editor->toPlainText();
     out << text;
     file.close();*/
-    input = system("sh -c 'scp /home/justin/programs/cpp/GUI/cache/current/main.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
+    input = system("scp /home/justin/programs/cpp/GUI/cache/current/main.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/");
 }
 
 void notePad::camera_c()
 {
     int input;
-    input = system("sh -c 'scp /home/justin/programs/cpp/GUI/cache/current/camera.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
+    input = system("scp /home/justin/programs/cpp/GUI/cache/current/camera.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/");
 }
 
 void notePad::camera_h()
 {
     int input;
-    input = system("sh -c 'scp /home/justin/programs/cpp/GUI/cache/current/camera.h alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
+    input = system("scp /home/justin/programs/cpp/GUI/cache/current/camera.h alarm@192.168.7.18:/home/alarm/project/cpp/camera4/");
 }
 
 void notePad::config()
 {
     int input;
-    char *tempFilePath = "sh -c 'scp ";
-    strcat(tempFilePath, config_file);
-    strcat(tempFilePath, " alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
+    char *tempFilePath;
+    strcpy(tempFilePath, "scp ");
+    strcat(tempFilePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    strcat(tempFilePath, config_txt.c_str());
+    strcat(tempFilePath, " alarm@192.168.7.18:/home/alarm/project/cpp/camera4/");
     input = system(tempFilePath);
 }
 
 void notePad::debug_c()
 {
     int input;
-    input = system("sh -c 'scp /home/justin/programs/cpp/GUI/cache/current/debug.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/'");
+    input = system("scp /home/justin/programs/cpp/GUI/cache/current/debug.cpp alarm@192.168.7.18:/home/alarm/project/cpp/camera4/");
 }

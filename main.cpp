@@ -14,11 +14,6 @@ int main(int argc, char *argv[])
 
     plt::quiver(x, y, u, v);
     plt::show();*/
-	strcpy(config_file, getenv("HOME"));
-	strcat(config_file, config_txt);
-	strcpy(config_temp, getenv("HOME"));
-	strcat(config_temp, config_temp_txt);
-
 	QApplication app(argc, argv);
 	MainWindow window(argc);
 	window.setWindowTitle("GUI");

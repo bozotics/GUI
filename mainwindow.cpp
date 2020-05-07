@@ -441,7 +441,10 @@ void MainWindow::updateRoi(QString roi)
 
 void MainWindow::readConfig()
 {
-	ifstream cFile (config_file);
+    char *tempFilePath;
+    strcpy(tempFilePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    strcat(tempFilePath, config_txt.c_str());
+	ifstream cFile (tempFilePath);
     if (cFile.is_open())
     {
         string line;
@@ -495,8 +498,13 @@ void MainWindow::readConfig()
 
 void MainWindow::saveConfig()
 {
-	ifstream cFile (config_file);
-	ofstream outFile(config_temp);
+    char *tempFilePath, *filePath;
+    strcpy(filePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    strcat(filePath, config_txt.c_str());
+	ifstream cFile (filePath);
+    strcpy(tempFilePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    strcat(tempFilePath, config_temp_txt.c_str());
+	ofstream outFile(tempFilePath);
     if (cFile.is_open())
     {
         string line;
@@ -548,8 +556,8 @@ void MainWindow::saveConfig()
 			else if(line.length() != 0) outFile << name << " = " << value << "\n";
         }
 		outFile.close();
-		rename(config_temp, config_file);
-		remove(config_temp);
+		rename(filePath, tempFilePath);
+		remove(filePath);
 	}
 }
 
