@@ -2,6 +2,7 @@
 
 void picam::run()
 {
+    //Initialise Serial communication with teensy
 	char dest[] = "/dev/ttyAMA0";
     if(gpioInitialise() < 0) cout << "GPIO Init failed\n";
     serialTX = serOpen(dest, 1000000, 0);
@@ -13,12 +14,13 @@ void picam::run()
     char sendArray[255];
     debugCheck = false;
     Point2f boundPoints[4];
-    thread threadFrame(&picam::getFrame, this);
-    thread threadBall(&picam::processBall, this);
-    thread threadGoal(&picam::processGoal, this);
-    thread threadField(&picam::processField, this);
+    thread threadFrame(&picam::getFrame, this); //thread for reading frames from the camera
+    thread threadBall(&picam::processBall, this);   //thread for tracking ball 
+    thread threadGoal(&picam::processGoal, this);   //thread for tracking goal
+    thread threadField(&picam::processField, this); //thread for tracking field
     
     auto begin = chrono::steady_clock::now();
+    //read results from each thread and concatenate them before sending them to the teensy
 	while(!stopped.load(memory_order_acq_rel))
 	{
         if(localBallCnt < ballCnt.load(memory_order_acq_rel))
@@ -133,6 +135,12 @@ void picam::run()
 	gpioTerminate();
 }
 
+/*
+ball processing:
+Apply colour thresholding to identify the ball
+Supported with extended kalman filter to continue tracking the ball in the event that it is obstructed by other objects on the field
+*/
+
 void picam::processBall()
 {
     vector<vector<Point> > contours;
@@ -190,9 +198,7 @@ void picam::processBall()
     Rect boundRect;
 
     coordinates pixelCoor;
-    ///////////////////////////
-    ///////////LOOP////////////
-    ///////////////////////////
+
     auto begin = chrono::steady_clock::now();
     while(!stopped.load(memory_order_acq_rel))
     {
@@ -281,6 +287,11 @@ void picam::processBall()
     cout << "ball FPS: " << (1000*(float)ballCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
+/*
+goal processing:
+apply colour thresholding on the image to identify a bouding box around the goal
+*/
+
 void picam::processGoal()
 {
     Mat frameGoal, maskGoalY, maskGoalB, tempMat;
@@ -325,6 +336,12 @@ void picam::processGoal()
     cout << "goal FPS: " << (1000*(float)goalCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
+/*
+field processing:
+grab coordinates of the four corners of the field 
+To do:
+Identify the coordinates of other robots by finding countours within the identified field
+*/
 void picam::processField()
 {
     Mat frameField, maskField, tempMat;
@@ -377,9 +394,11 @@ void picam::getFrame()
         imgCnt++;
 		Camera.grab();
 		bufferPosition.store(Camera.retrieve(), memory_order_acq_rel);
+        //send frames to the respective threads based on the frame counter that is derived from the thread's priority
         ballReq.fetch_sub(1, memory_order_seq_cst);
         goalReq.fetch_sub(1, memory_order_seq_cst);
         fieldReq.fetch_sub(1, memory_order_seq_cst);
+        //wake threads that are waiting after processing a frame
         if(ballReq.load(memory_order_acq_rel) <= 0) ballCond.notify_all();
         if(goalReq.load(memory_order_acq_rel) <= 0) goalCond.notify_all();
         if(fieldReq.load(memory_order_acq_rel) <= 0) fieldCond.notify_all();
@@ -412,6 +431,7 @@ void picam::waitForField()
 void picam::inRangeHSV(int type, Mat &input, Mat &output, Mat &temp)
 {
     if(debugCheck) read.lock();
+    //threshold range (else condition for ranges that includes values < 180 && values < 180)
     if(thres[type*6] <= 180)
         inRange(input, Scalar(thres[type*6+3], thres[type*6+4], thres[type*6+5]), Scalar(thres[type*6], thres[type*6+1], thres[type*6+2]), output);
     else

@@ -1,5 +1,9 @@
 #include "camera.h"
 
+/*
+This program will be run when it is connected to a laptop and the GUI program is launched
+*/
+
 void picam::debug()
 {
     debugCheck = true;
@@ -14,16 +18,17 @@ void picam::debug()
     Point2f bBoundPoints[4], yBoundPoints[4], fBoundPoints[4];
 	socketConnect();
 	sendImageDims();
-	thread threadCommands(&picam::receiveCommands, this);
-	thread threadFrame(&picam::getFrame, this);
-	thread threadBall(&picam::processBall, this);
-    thread threadGoal(&picam::processGoal, this);
-    thread threadField(&picam::processField, this);
-    while(!stopped.load(memory_order_acq_rel))
+	thread threadCommands(&picam::receiveCommands, this); //thread for receiving from the computer 
+	thread threadFrame(&picam::getFrame, this); //thread for reading frames from the camera
+	thread threadBall(&picam::processBall, this);   //thread for tracking ball
+    thread threadGoal(&picam::processGoal, this);   //thread for tracking goal
+    thread threadField(&picam::processField, this); //thread for tracking field
+    while(!stopped.load(memory_order_acq_rel))  //will run until pause command is sent or GUI is closed
     {
         if(frameNum != bufferPosition.load(memory_order_acq_rel))
         {
             frameNum = bufferPosition.load(memory_order_acq_rel);
+            //generate the image for different modes 
             debugImages[0] = image[frameNum].clone();
             cvtColor(debugImages[0], debugImages[1], COLOR_BGR2HSV);
             debugImages[5] = debugImages[0].clone();
@@ -49,6 +54,7 @@ void picam::debug()
     	    		return contourArea(c1, false) < contourArea(c2, false);
 		    			});
 		    }
+            //read data the tracking threads
             read.lock();
             if(trackType == 0 || trackType == 4){
                 if(localBallCnt < ballCnt.load(memory_order_acq_rel))
@@ -136,12 +142,13 @@ void picam::debug()
 	        conv = htons(dualMode);
 	        send(socketIdentity, (char*)&conv, sizeof(uint16_t), 0);
   	        send(socketIdentity, imageToSend.data, imageSize, 0);
-            dualMode = (dualMode+1)%2;
+            dualMode = (dualMode+1)%2;  //select the other frame to send over in the next iteration
         }
 		else
 			usleep(2000);
     }
 	cout << "debug\n";
+    //clean up procedure
 	threadCommands.join();
 	threadFrame.join();
 	threadBall.join();
@@ -151,6 +158,25 @@ void picam::debug()
 	Camera.release();
 }
 
+/*
+Commands are orgnised in such a way:
+type:
+0 Stop program
+1-24 Colour values for tracking
+25 White balance red value
+26 White balance blue value
+27 Exposure Compensation 
+28 Brightness 
+29 Saturation 
+30 Shutter speed 
+31 ISO 
+32 Mode of screen 1
+33 Mode of screen 2
+34 Tracktype
+
+value:
+value of a setting for the chosen type
+*/
 void picam::receiveCommands()
 {
     int type, val, prevType = 0, prevVal = 1;
