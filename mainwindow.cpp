@@ -441,8 +441,8 @@ void MainWindow::updateRoi(QString roi)
 
 void MainWindow::readConfig()
 {
-    char *filePath = static_cast<char*>(malloc(strlen(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData()) + strlen(config_txt.c_str()) + 1));
-    strcpy(filePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    char *filePath = static_cast<char*>(malloc(strlen(QCoreApplication::applicationDirPath().toLocal8Bit().constData()) + strlen(config_txt.c_str()) + 1));
+    strcpy(filePath, QCoreApplication::applicationDirPath().toLocal8Bit().constData());
     strcat(filePath, config_txt.c_str());
 	ifstream cFile (filePath);
     if (cFile.is_open())
@@ -498,12 +498,12 @@ void MainWindow::readConfig()
 
 void MainWindow::saveConfig()
 {
-    char *filePath = static_cast<char*>(malloc(strlen(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData()) + strlen(config_txt.c_str()) + 1));
-    char *tempFilePath = static_cast<char*>(malloc(strlen(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData()) + strlen(config_temp_txt.c_str()) + 1));
-    strcpy(filePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    char *filePath = static_cast<char*>(malloc(strlen(QCoreApplication::applicationDirPath().toLocal8Bit().constData()) + strlen(config_txt.c_str()) + 1));
+    char *tempFilePath = static_cast<char*>(malloc(strlen(QCoreApplication::applicationDirPath().toLocal8Bit().constData()) + strlen(config_temp_txt.c_str()) + 1));
+    strcpy(filePath, QCoreApplication::applicationDirPath().toLocal8Bit().constData());
     strcat(filePath, config_txt.c_str());
 	ifstream cFile (filePath);
-    strcpy(tempFilePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    strcpy(tempFilePath, QCoreApplication::applicationDirPath().toLocal8Bit().constData());
     strcat(tempFilePath, config_temp_txt.c_str());
 	ofstream outFile(tempFilePath);
     if (cFile.is_open())
