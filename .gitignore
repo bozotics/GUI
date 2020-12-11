@@ -9,3 +9,4 @@ Makefile
 .clangd/
 GUI_autogen/
 compile_commands.json
+GUI
