@@ -247,9 +247,9 @@ void notePad::camera_h()
 void notePad::config()
 {
     int input;
-    char *filePath = static_cast<char*>(malloc(strlen(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData()) + strlen(config_txt.c_str()) + strlen("scp  alarm@192.168.7.18:/home/alarm/project/cpp/camera4/") + 1));
+    char *filePath = static_cast<char*>(malloc(strlen(QCoreApplication::applicationDirPath().toLocal8Bit().constData()) + strlen(config_txt.c_str()) + strlen("scp  alarm@192.168.7.18:/home/alarm/project/cpp/camera4/") + 1));
     strcpy(filePath, "scp ");
-    strcat(filePath, QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toLocal8Bit().constData());
+    strcat(filePath, QCoreApplication::applicationDirPath().toLocal8Bit().constData());
     strcat(filePath, config_txt.c_str());
     strcat(filePath, " alarm@192.168.7.18:/home/alarm/project/cpp/camera4/");
     input = system(filePath);
