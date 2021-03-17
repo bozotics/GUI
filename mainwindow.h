@@ -222,6 +222,8 @@ class MainWindow : public QMainWindow{
 };
 
 const string config_txt = "/cache/current/config.txt", config_temp_txt = "/cache/current/config_temp.txt";
+const string camera_cpp = "/cache/current/camera.cpp", camera_h = "/cache/current/camera.h";
+const string debug_cpp = "/cache/current/debug.cpp", main_cpp = "/cache/current/main.cpp";
 
 #endif
 

@@ -1,10 +1,11 @@
 #include "camera.h"
 
+// extern bool fuckoff;
+
 void picam::run()
 {
     //Initialise Serial communication with teensy
 	char dest[] = "/dev/ttyAMA0";
-    if(gpioInitialise() < 0) cout << "GPIO Init failed\n";
     serialTX = serOpen(dest, 1000000, 0);
      
     unsigned int localBallCnt = 0, localGoalCnt = 0, localFieldCnt = 0, bufferPointer;
@@ -118,12 +119,15 @@ void picam::run()
             ++arrayPos;
             for(int i=0; i<arrayPos; ++i) cout << sendArray[i];
             cout << endl;
-            //serWrite(serialTX, sendArray, arrayPos);
+            serWrite(serialTX, sendArray, arrayPos);
             arrayPos = 0;
         }
         //else usleep(1000);
         auto end = chrono::steady_clock::now();
-    	if((float)chrono::duration<double, milli>(end-begin).count() > 30000) stopped.store(true, memory_order_acq_rel);
+    	if((float)chrono::duration<double, milli>(end-begin).count() > 60000) stopped.store(true, memory_order_acq_rel);
+        // if(fuckoff) {
+        //     stopped.store(true, memory_order_acq_rel);
+        // }
 	}
 	cout << "run\n";
 	threadFrame.join();

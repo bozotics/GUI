@@ -2,20 +2,20 @@ width = 320
 height = 240
 fps = 90
 
-awb_r = 15
-awb_b = 16
+awb_r = 12
+awb_b = 14
 exposure = 2
-brightness = 62
-saturation = 70
+brightness = 60
+saturation = 100
 ss = 15000
 ISO = 500
 
-1-lo = 1
-2-lo = 184
-3-lo = 181
-1-hi = 8
-2-hi = 255
-3-hi = 255
+1-lo = 10
+2-lo = 140
+3-lo = 110
+1-hi = 40
+2-hi = 225
+3-hi = 192
 
 b1-lo = 99
 b2-lo = 115
@@ -24,12 +24,12 @@ b1-hi = 106
 b2-hi = 147
 b3-hi = 105
 
-y1-lo = 18
-y2-lo = 251
-y3-lo = 170
-y1-hi = 21
+y1-lo = 51
+y2-lo = 219
+y3-lo = 185
+y1-hi = 64
 y2-hi = 255
-y3-hi = 201
+y3-hi = 197
 
 f1-lo = 55
 f2-lo = 163
@@ -38,8 +38,8 @@ f1-hi = 61
 f2-hi = 180
 f3-hi = 149
 
-centre_x = 158
-centre_y = 114
+centre_x = 161
+centre_y = 110
 
 P1Skip = 1
 P2Skip = 5

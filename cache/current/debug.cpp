@@ -30,6 +30,7 @@ void picam::debug()
             frameNum = bufferPosition.load(memory_order_acq_rel);
             //generate the image for different modes 
             debugImages[0] = image[frameNum].clone();
+            //cout << image[frameNum].rows << "  " << image[frameNum].cols << endl;
             cvtColor(debugImages[0], debugImages[1], COLOR_BGR2HSV);
             debugImages[5] = debugImages[0].clone();
 		    debugImages[6] = debugImages[0].clone();

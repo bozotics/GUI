@@ -30,6 +30,8 @@ using namespace cv;
 
 #define PI 3.14159265
 
+//bool fuckoff=false;
+
 class picam{
     //FUNCTIONS
     public:
@@ -39,6 +41,7 @@ class picam{
         raspicam::RaspiCam Camera; 
         Mat kernel, image[10];
         int zero = 0;
+        atomic_bool stopped = ATOMIC_VAR_INIT(false);
 
     private:
         struct coordinates{
@@ -80,7 +83,7 @@ class picam{
         atomic_uint ballPriority = ATOMIC_VAR_INIT(1);
         atomic_uint goalPriority = ATOMIC_VAR_INIT(2);
         atomic_uint fieldPriority = ATOMIC_VAR_INIT(3);
-        atomic_bool stopped = ATOMIC_VAR_INIT(false);
+        
         atomic_int ballReq = ATOMIC_VAR_INIT(1);
         atomic_int goalReq = ATOMIC_VAR_INIT(5);
         atomic_int fieldReq = ATOMIC_VAR_INIT(9);
