@@ -53,6 +53,7 @@ int main(int argc, char **argv){
         printf("Debug Mode...\n");
 		gpioSetAlertFunc(24, dummy);
         camera -> debug();
+		gpioTerminate();
     }
 	delete camera;	//delete camera object
 	printf("Terminated program\n");

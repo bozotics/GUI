@@ -20,7 +20,9 @@ void s1_changed(int gpio, int level, uint32_t tick)
 void s2_changed(int gpio, int level, uint32_t tick)
 {
     cout << "S2 FUCK " << gpioRead(gpio) << endl;
-    fuckoff=2;
+    if (gpioRead(gpio)) {   //if triggered high
+        fuckoff=2;
+    }
 }
 
 int main() {
@@ -55,7 +57,8 @@ int main() {
         }
         cout << "fuck3" << endl;
     } else if (fuckoff == 2) {
-        system("sudo poweroff");
+        cout << "shutting down";
+        system("sudo shutdown -h now");
     }
     
     return 0;
