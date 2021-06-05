@@ -24,6 +24,7 @@ void picam::run()
     //read results from each thread and concatenate them before sending them to the teensy
 	while(!stopped.load(memory_order_acq_rel))
 	{
+        //waitForSend();
         if(localBallCnt < ballCnt.load(memory_order_acq_rel))
         {
             localBallCnt = ballCnt.load(memory_order_acq_rel);
@@ -115,16 +116,21 @@ void picam::run()
         }
         if(arrayPos > 0)
         {
-            *(sendArray + arrayPos) = 'e';
+            *(sendArray + arrayPos) = '|';
             ++arrayPos;
             for(int i=0; i<arrayPos; ++i) cout << sendArray[i];
             cout << endl;
             serWrite(serialTX, sendArray, arrayPos);
             arrayPos = 0;
         }
+
+        //read serial shit frm teensy 
+        
+
+
         //else usleep(1000);
         auto end = chrono::steady_clock::now();
-    	if((float)chrono::duration<double, milli>(end-begin).count() > 60000) stopped.store(true, memory_order_acq_rel);
+    	if((float)chrono::duration<double, milli>(end-begin).count() > 600000) stopped.store(true, memory_order_acq_rel);
         // if(fuckoff) {
         //     stopped.store(true, memory_order_acq_rel);
         // }
@@ -326,6 +332,9 @@ void picam::processGoal()
 	    }
         else bGoal[tempInt] = empty;
         findContours(maskGoalY, yContours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+
+        //sendCond.notify_all;
+
 	    if(yContours.size() > 0)
 	    {
 	    	sort(yContours.begin(), yContours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
@@ -431,6 +440,12 @@ void picam::waitForField()
     unique_lock<mutex> lock(fieldMtx);
     fieldCond.wait(lock);
 }
+
+// void picam::waitForSend())
+// {
+//     unique_lock<mutex> lock(sendMtx);
+//     sendCond.wait(lock);
+// }
 
 void picam::inRangeHSV(int type, Mat &input, Mat &output, Mat &temp)
 {

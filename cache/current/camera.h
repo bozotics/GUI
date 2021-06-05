@@ -90,10 +90,12 @@ class picam{
         condition_variable ballCond;
         condition_variable goalCond;
         condition_variable fieldCond;
+        //condition_variable sendCond;
         //shared_mutex imgMtx;
         mutex ballMtx;
         mutex goalMtx;
         mutex fieldMtx;
+        //mutex sendMtx;
         unsigned int imgCnt = 0;
         atomic_uint ballCnt = ATOMIC_VAR_INIT(0);
         atomic_uint goalCnt = ATOMIC_VAR_INIT(0);

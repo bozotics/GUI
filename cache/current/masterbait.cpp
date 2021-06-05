@@ -41,7 +41,7 @@ int main() {
     cout << "READY" << endl;
     auto begin = std::chrono::steady_clock::now();
     while(!fuckoff) {
-        if(chrono::steady_clock::now() - begin > chrono::seconds(30)) break;
+        if(chrono::steady_clock::now() - begin > chrono::seconds(6000)) break;
         usleep(100000);
     }
     if (fuckoff == 1) {

@@ -3,44 +3,49 @@ height = 240
 fps = 90
 
 awb_r = 12
-awb_b = 14
+awb_b = 12
 exposure = 2
-brightness = 60
+brightness = 70
 saturation = 100
 ss = 15000
 ISO = 500
 
 1-lo = 10
 2-lo = 140
-3-lo = 110
-1-hi = 40
-2-hi = 225
-3-hi = 192
+3-lo = 150
+1-hi = 25
+2-hi = 255
+3-hi = 255
 
-b1-lo = 99
-b2-lo = 115
-b3-lo = 89
-b1-hi = 106
-b2-hi = 147
-b3-hi = 105
+b1-lo = 70
+b2-lo = 108
+b3-lo = 137
+b1-hi = 85
+b2-hi = 160
+b3-hi = 170
 
-y1-lo = 51
-y2-lo = 219
-y3-lo = 185
-y1-hi = 64
+y1-lo = 34
+y2-lo = 165
+y3-lo = 160
+y1-hi = 53
 y2-hi = 255
-y3-hi = 197
+y3-hi = 215
 
-f1-lo = 55
-f2-lo = 163
-f3-lo = 141
-f1-hi = 61
-f2-hi = 180
-f3-hi = 149
+f1-lo = 54
+f2-lo = 140
+f3-lo = 150
+f1-hi = 65
+f2-hi = 208
+f3-hi = 211
 
-centre_x = 161
-centre_y = 110
+//white_robot = //white_robot
+centre_x = 154
+centre_y = 117
+
+//black_robot = //black_robot
+//centre_x = 155
+//centre_y = 94
 
 P1Skip = 1
-P2Skip = 5
+P2Skip = 2
 P3Skip = 9
