@@ -43,6 +43,7 @@ void picam::debug()
 			cvtColor(debugImages[8], debugImages[3], COLOR_GRAY2BGR);
 			dilate(debugImages[8], debugImages[8], kernel, Point(-1, -1), 3);
 			erode(debugImages[8], debugImages[8], kernel, Point(-1, -1), 3);
+            bitwise_and(circleMask, debugImages[8], debugImages[8]);     //change to bitwise_and to remove circle
 	        cvtColor(debugImages[8], debugImages[4], COLOR_GRAY2BGR);
 			findContours(debugImages[8], contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
 

@@ -7,8 +7,8 @@ void picam::run()
     //Initialise Serial communication with teensy
 	char dest[] = "/dev/ttyAMA0";
     serialTX = serOpen(dest, 1000000, 0);
-     
-    unsigned int localBallCnt = 0, localGoalCnt = 0, localFieldCnt = 0, bufferPointer;
+    unsigned int bufferPointer;
+    //unsigned int localBallCnt = 0, localGoalCnt = 0, localFieldCnt = 0, bufferPointer;
     unsigned int distance, angle;
     int aveX, aveY;
     int arrayPos=0;
@@ -24,11 +24,10 @@ void picam::run()
     //read results from each thread and concatenate them before sending them to the teensy
 	while(!stopped.load(memory_order_acq_rel))
 	{
-        //waitForSend();
-        if(localBallCnt < ballCnt.load(memory_order_acq_rel))
+        waitForSend();
+        if(updateSend(0))
         {
-            localBallCnt = ballCnt.load(memory_order_acq_rel);
-            bufferPointer = localBallCnt%3;
+            bufferPointer = ballCnt.load(memory_order_acq_rel)%3;
             if(rBall[bufferPointer].width != 0)
             {
                 distance = (int)sqrt(pow(rBall[bufferPointer].x, 2) + pow(rBall[bufferPointer].y, 2));
@@ -50,10 +49,9 @@ void picam::run()
                 inttochar(angle, sendArray, arrayPos);
             }
         }
-        if(localGoalCnt < goalCnt.load(memory_order_acq_rel))
+        if(updateSend(1))
         {
-            localGoalCnt = goalCnt.load(memory_order_acq_rel);
-            bufferPointer = localGoalCnt%3;
+            bufferPointer = goalCnt.load(memory_order_acq_rel)%3;
             if(bGoal[bufferPointer].size.width != 1000)
             {
                 bGoal[bufferPointer].points(boundPoints);
@@ -91,10 +89,9 @@ void picam::run()
                 inttochar(angle, sendArray, arrayPos);
             }
         }   
-        if(localFieldCnt < fieldCnt.load(memory_order_acq_rel))
+        if(updateSend(2))
         {
-            localFieldCnt = fieldCnt.load(memory_order_acq_rel);
-            bufferPointer = localFieldCnt%3;
+            bufferPointer = fieldCnt.load(memory_order_acq_rel)%3;
             if(field[bufferPointer].size.width != 1000)
             {
                 field[bufferPointer].points(boundPoints);
@@ -118,16 +115,11 @@ void picam::run()
         {
             *(sendArray + arrayPos) = '|';
             ++arrayPos;
-            for(int i=0; i<arrayPos; ++i) cout << sendArray[i];
-            cout << endl;
+            //for(int i=0; i<arrayPos; ++i) cout << sendArray[i];
+            //cout << endl;
             serWrite(serialTX, sendArray, arrayPos);
             arrayPos = 0;
         }
-
-        //read serial shit frm teensy 
-        
-
-
         //else usleep(1000);
         auto end = chrono::steady_clock::now();
     	if((float)chrono::duration<double, milli>(end-begin).count() > 600000) stopped.store(true, memory_order_acq_rel);
@@ -292,9 +284,10 @@ void picam::processBall()
         rBall[tempInt] = boundRect;
         pBall[tempInt] = predRect;
         ballCnt.fetch_add(1, memory_order_acq_rel);
+        if(found) wakeSend(0);
     }
     auto end = chrono::steady_clock::now();
-    cout << "ball FPS: " << (1000*(float)ballCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
+    cout << "ball FPS: " << (1000*(float)ballCnt.load(memory_order_acq_rel)/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
 /*
@@ -306,6 +299,7 @@ void picam::processGoal()
 {
     Mat frameGoal, maskGoalY, maskGoalB, tempMat;
     unsigned int tempInt;
+    bool found = false;
     vector<vector<Point> > bContours;
     vector<vector<Point> > yContours;
     RotatedRect empty(Point2f(500, 500), Size2f(1000, 1000), 0);
@@ -329,24 +323,27 @@ void picam::processGoal()
         		return contourArea(c1, false) < contourArea(c2, false);
 	    			});
 	    	bGoal[tempInt] = minAreaRect(bContours[bContours.size()-1]);
+            found = true;
 	    }
         else bGoal[tempInt] = empty;
         findContours(maskGoalY, yContours, RETR_TREE, CHAIN_APPROX_SIMPLE);
-
-        //sendCond.notify_all;
-
 	    if(yContours.size() > 0)
 	    {
 	    	sort(yContours.begin(), yContours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
         		return contourArea(c1, false) < contourArea(c2, false);
 	    			});
 	    	yGoal[tempInt] = minAreaRect(yContours[yContours.size()-1]);
+            if(!found) found = true;
 	    }
         else yGoal[tempInt] = empty;
         goalCnt.fetch_add(1, memory_order_acq_rel);
+        if(found){
+            wakeSend(1);
+            found = false;
+        }
     }
     auto end = chrono::steady_clock::now();
-    cout << "goal FPS: " << (1000*(float)goalCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
+    cout << "goal FPS: " << (1000*(float)goalCnt.load(memory_order_acq_rel)/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
 /*
@@ -378,12 +375,17 @@ void picam::processField()
         	return contourArea(c1, false) < contourArea(c2, false);
 	    	});
 	    	field[tempInt] = minAreaRect(contours[contours.size()-1]);
+            fieldCnt.fetch_add(1, memory_order_acq_rel);
+            wakeSend(2);
 	    }
-        else field[tempInt] = empty;
-        fieldCnt.fetch_add(1, memory_order_acq_rel);
+        else{
+            field[tempInt] = empty;
+            fieldCnt.fetch_add(1, memory_order_acq_rel);
+        }
+        
     }
     auto end = chrono::steady_clock::now();
-    cout << "field FPS: " << (1000*(float)fieldCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
+    cout << "field FPS: " << (1000*(float)fieldCnt.load(memory_order_acq_rel)/chrono::duration<double, milli>(end-begin).count()) << "\n";
 }
 
 double picam::distanceMapper(double pixel, int &centre)
@@ -412,41 +414,81 @@ void picam::getFrame()
         goalReq.fetch_sub(1, memory_order_seq_cst);
         fieldReq.fetch_sub(1, memory_order_seq_cst);
         //wake threads that are waiting after processing a frame
-        if(ballReq.load(memory_order_acq_rel) <= 0) ballCond.notify_all();
-        if(goalReq.load(memory_order_acq_rel) <= 0) goalCond.notify_all();
-        if(fieldReq.load(memory_order_acq_rel) <= 0) fieldCond.notify_all();
+        if(ballReq.load(memory_order_acq_rel) <= 0) wakeBall();
+        if(goalReq.load(memory_order_acq_rel) <= 0) wakeGoal();
+        if(fieldReq.load(memory_order_acq_rel) <= 0) wakeField();
     }
     auto end = chrono::steady_clock::now();
     cout << "Frame FPS: " << (1000*(float)imgCnt/chrono::duration<double, milli>(end-begin).count()) << "\n";
-    ballCond.notify_all();
-    goalCond.notify_all();
-    fieldCond.notify_all();
+    wakeBall();
+    wakeGoal();
+    wakeField();
+    wakeSend(0);
 }
 
 void picam::waitForBall()
 {
     unique_lock<mutex> lock(ballMtx);
-    ballCond.wait(lock);
+    while(!wakeBallFlag) ballCond.wait(lock);
+    wakeBallFlag = false;
+}
+
+void picam::wakeBall()
+{
+    unique_lock<mutex> lock(ballMtx);
+    wakeBallFlag = true; 
+    ballCond.notify_one();
 }
 
 void picam::waitForGoal()
 {
     unique_lock<mutex> lock(goalMtx);
-    goalCond.wait(lock);
+    while(!wakeGoalFlag) goalCond.wait(lock);
+    wakeGoalFlag = false;
+}
+
+void picam::wakeGoal()
+{
+    unique_lock<mutex> lock(goalMtx);
+    wakeGoalFlag = true;
+    goalCond.notify_one();
 }
 
 void picam::waitForField()
 {
     unique_lock<mutex> lock(fieldMtx);
-    fieldCond.wait(lock);
+    while(!wakeFieldFlag) fieldCond.wait(lock);
+    wakeFieldFlag = false;
 }
 
-// void picam::waitForSend())
-// {
-//     unique_lock<mutex> lock(sendMtx);
-//     sendCond.wait(lock);
-// }
+void picam::wakeField()
+{
+    unique_lock<mutex> lock(fieldMtx);
+    wakeFieldFlag = true;
+    fieldCond.notify_one();
+}
 
+void picam::waitForSend()
+{
+    unique_lock<mutex> lock(sendMtx);
+    while(!sendDataFlag[0] && !sendDataFlag[1] && !sendDataFlag[2]) sendCond.wait(lock);
+}
+
+void picam::wakeSend(int category)
+{
+    unique_lock<mutex> lock(sendMtx);
+    sendDataFlag[category] = true; 
+    sendCond.notify_one();
+}
+
+bool picam::updateSend(int category)
+{
+    static int temp;
+    unique_lock<mutex> lock(sendMtx);
+    temp = sendDataFlag[category];
+    if(sendDataFlag[category]) sendDataFlag[category] = false;
+    return temp;
+}
 void picam::inRangeHSV(int type, Mat &input, Mat &output, Mat &temp)
 {
     if(debugCheck) read.lock();
@@ -528,6 +570,7 @@ void picam::readConfig()
             else if(name == "P1Skip") prop.PrioSkip[0] = stoi(value);
             else if(name == "P2Skip") prop.PrioSkip[1] = stoi(value);
             else if(name == "P3Skip") prop.PrioSkip[2] = stoi(value);
+            else if (name == "maskRadius") prop.maskRadius = stoi(value);
 			for(int i=0; i<24; i++) tempThres[i] = thres[i];
         }
     }
@@ -553,4 +596,6 @@ picam::picam()
     Camera.setISO(prop.configVal[6]);
 	//image.create(480, 640, CV_8UC3); //important else program will crash
 	image2.create(240, 320, CV_8UC3);
+    circleMask = Mat::zeros(240, 320, CV_8UC1);
+    circle(circleMask, Point(prop.x, prop.y), prop.maskRadius, 255,-1); //change last value to -1 to remove circle
 }

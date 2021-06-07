@@ -56,6 +56,7 @@ class picam{
             int y;
             int configVal[7]; //[awb_r, awb_b, exposure, brightness, saturation, ss, ISO]
             int PrioSkip[3];
+            int maskRadius;
         };
 
     private:    //camera
@@ -65,8 +66,14 @@ class picam{
         void processGoal();
         void processField();
         void waitForBall();
+        void wakeBall();
         void waitForGoal();
+        void wakeGoal();
         void waitForField();
+        void wakeField();
+        void waitForSend();
+        void wakeSend(int category);
+        bool updateSend(int category);
         double distanceMapper(double pixel, int &centre);
         double distanceUnmapper(double const &dist, int &centre);
         void inRangeHSV(int type,  Mat &input, Mat &output, Mat &temp);
@@ -78,7 +85,12 @@ class picam{
         void receiveCommands();
     //VARIABLES
     private:    //camera
-        Mat image2;
+        Mat image2, circleMask;
+        bool sendDataFlag[3] = {false, false, false};
+        bool wakeBallFlag = false;
+        bool wakeGoalFlag = false;
+        bool wakeFieldFlag = false;
+
         atomic_uint bufferPosition = ATOMIC_VAR_INIT(0);
         atomic_uint ballPriority = ATOMIC_VAR_INIT(1);
         atomic_uint goalPriority = ATOMIC_VAR_INIT(2);
@@ -90,12 +102,12 @@ class picam{
         condition_variable ballCond;
         condition_variable goalCond;
         condition_variable fieldCond;
-        //condition_variable sendCond;
+        condition_variable sendCond;
         //shared_mutex imgMtx;
         mutex ballMtx;
         mutex goalMtx;
         mutex fieldMtx;
-        //mutex sendMtx;
+        mutex sendMtx;
         unsigned int imgCnt = 0;
         atomic_uint ballCnt = ATOMIC_VAR_INIT(0);
         atomic_uint goalCnt = ATOMIC_VAR_INIT(0);
